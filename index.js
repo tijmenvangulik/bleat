@@ -1,6 +1,4 @@
-var bleat = require('./dist/bleat.core');
-require('./dist/bleat.chromeos');
-require('./dist/bleat.evothings');
+var bluetooth = require('./dist/bleat.core');
 require('./dist/bleat.noble');
 
-module.exports = bleat;
+module.exports = bluetooth;

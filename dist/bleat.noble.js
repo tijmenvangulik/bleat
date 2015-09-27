@@ -54,62 +54,78 @@
     // https://github.com/sandeepmistry/noble
     if (noble) {
         bleat._addAdapter("noble", {
-            foundFn: null,
             deviceHandles: {},
             serviceHandles: {},
             characteristicHandles: {},
             descriptorHandles: {},
             charNotifies: {},
-            init: function(readyFn, errorFn) {
+            startScan: function(serviceUUIDs, completeFn, foundFn, errorFn) {
                 function stateCB(state) {
                     if (state === "poweredOn") {
                         noble.on('discover', function(deviceInfo) {
-                            if (this.foundFn) {
-                                var address = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.uuid;
-                                this.deviceHandles[address] = deviceInfo;
-                                var serviceUUIDs = [];
-                                deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
-                                    serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
-                                });
-                                var device = new bleat._Device(address, deviceInfo.advertisement.localName || address, serviceUUIDs);
-                                this.foundFn(device);
-                            }
+
+                            var id = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.id;
+                            var serviceUUIDs = [];
+                            deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
+                                serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
+                            });
+
+                            this.deviceHandles[id] = deviceInfo;
+
+                            var device = new bleat._Device({
+                                id: id,
+                                name: deviceInfo.advertisement.localName,
+                                uuids: serviceUUIDs,
+                                adData: {
+                                    manufacturerData: deviceInfo.advertisement.manufacturerData,
+                                    serviceData: deviceInfo.advertisement.serviceData,
+                                    txPower: deviceInfo.advertisement.txPowerLevel,
+                                    rssi: deviceInfo.rssi
+                                }
+                            });
+
+                            foundFn(device);
+
                         }.bind(this));
-                        readyFn();
+                        noble.startScanning(serviceUUIDs, false, checkForError(errorFn, completeFn));
                     }
                     else errorFn("adapter not enabled");
                 }
+
                 if (noble.state === "unknown") noble.once('stateChange', stateCB.bind(this));
                 else stateCB(noble.state);
-            },
-            startScan: function(serviceUUIDs, foundFn, errorFn) {
-                this.foundFn = foundFn;
-                noble.startScanning(serviceUUIDs, false, checkForError(errorFn));
             },
             stopScan: function(errorFn) {
                 noble.stopScanning();
             },
             connect: function(device, connectFn, disconnectFn, errorFn) {
-                var baseDevice = this.deviceHandles[device.address];
+                var baseDevice = this.deviceHandles[device.id];
                 baseDevice.once("connect", connectFn);
                 baseDevice.once("disconnect", disconnectFn);
                 baseDevice.connect(checkForError(errorFn));
             },
             disconnect: function(device, errorFn) {
-                this.deviceHandles[device.address].disconnect(checkForError(errorFn));
+                this.deviceHandles[device.id].disconnect(checkForError(errorFn));
             },
             discoverServices: function(device, serviceUUIDs, completeFn, errorFn) {
-                var baseDevice = this.deviceHandles[device.address];
-                baseDevice.discoverServices(serviceUUIDs, checkForError(errorFn, function(services) {
+                var baseDevice = this.deviceHandles[device.id];
+                baseDevice.discoverServices([], checkForError(errorFn, function(services) {
+
+                    var discovered = [];
                     services.forEach(function(serviceInfo) {
-
-                        this.serviceHandles[serviceInfo.uuid] = serviceInfo;
                         var serviceUUID = bleat._canonicalUUID(serviceInfo.uuid);
-                        var service = new bleat._Service(serviceInfo.uuid, serviceUUID, true);
-                        device.services[service.uuid] = service;
 
+                        if (serviceUUIDs.length === 0 || serviceUUIDs.indexOf(serviceUUID) >= 0) {
+                            this.serviceHandles[serviceUUID] = serviceInfo;
+                            discovered.push(new bleat._Service({
+                                device: device,
+                                uuid: serviceUUID,
+                                primary: true
+                            }));
+                        }
                     }, this);
-                    completeFn();
+
+                    completeFn(discovered);
                 }.bind(this)));
             },
             discoverIncludedServices: function(service, serviceUUIDs, completeFn, errorFn) {
