@@ -1,5 +1,6 @@
 var bluetooth = require('./index');
 var gattServer;
+var heartChar;
 
 function log(message) {
 	console.log(message);
@@ -24,18 +25,24 @@ bluetooth.requestDevice({
 })
 .then(characteristic => {
 	log('Characteristic: ' + characteristic.uuid);
-	return characteristic.getDescriptors();
+	heartChar = characteristic;
+	return heartChar.getDescriptors();
 })
 .then(descriptors => {
 	descriptors.forEach(descriptor => {
 		log('Descriptor: ' + descriptor.uuid);
 	});
-/*
-	return characteristic.readValue();
+
+	return Array.apply(null, Array(10)).reduce(sequence => {
+		return sequence.then(() => {
+			return heartChar.readValue();
+		}).then(value => {
+			var view = new DataView(value);
+			log('Value: ' + view.getUint16(0));
+		});
+	}, Promise.resolve());
 })
-.then(value => {
-	log('Value: ' + new Uint8Array(value)[0]);
-*/
+.then(() => {
 	gattServer.disconnect();
 	log('Gatt server connected: ' + gattServer.connected);
 	process.exit();

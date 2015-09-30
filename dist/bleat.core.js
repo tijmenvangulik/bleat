@@ -27,7 +27,6 @@
  */
 
 // TODO:
-//  passback handles (descriptor arrays)
 //  event handlers
 //  service filtering
 //  test read/write of char/desc
@@ -353,6 +352,7 @@
 
     // BluetoothDevice Object
     var BluetoothDevice = function(properties) {
+        this._handle = null;
         this.id = "unknown"; 
         this.name = null;
         this.vendorIDSource = "bluetooth";
@@ -375,7 +375,7 @@
     };
     BluetoothDevice.prototype.connectGATT = function() {
         return new Promise(function(resolve, reject) {
-            adapter.connect(this.id, function() {
+            adapter.connect(this._handle, function() {
                 this.gattServer = new BluetoothGATTRemoteServer();
                 this.gattServer.device = this;
                 this.gattServer.connected = true;
@@ -392,13 +392,13 @@
         this.connected = false;
     };
     BluetoothGATTRemoteServer.prototype.disconnect = function() {
-        adapter.disconnect(this.device.id);
+        adapter.disconnect(this.device._handle);
         this.connected = false;
     };
     BluetoothGATTRemoteServer.prototype.getPrimaryService = function(service) {
         return new Promise(function(resolve, reject) {
             if (!service) return reject("getPrimaryService error: no service specified");
-            adapter.discoverServices(this.device.id, [getServiceUUID(service)], function(services) {
+            adapter.discoverServices(this.device._handle, [getServiceUUID(service)], function(services) {
                 // To do: filter services
                 if (services.length === 0) return reject("getPrimaryService error: service not found");
                 services[0].device = this.device;
@@ -409,7 +409,7 @@
     BluetoothGATTRemoteServer.prototype.getPrimaryServices = function(service) {
         var serviceUUIDs = service ? [getServiceUUID(service)] : [];
         return new Promise(function(resolve, reject) {
-            adapter.discoverServices(this.device.id, serviceUUIDs, function(services) {
+            adapter.discoverServices(this.device._handle, serviceUUIDs, function(services) {
                 // To do: filter services
                 if (service && services.length === 0) return reject("getPrimaryServices error: service not found");
                 resolve(services.map(function(serviceInfo) {
@@ -422,6 +422,7 @@
 
     // BluetoothGATTService Object
     var BluetoothGATTService = function(properties) {
+        this._handle = null;
         this.device = null;
         this.uuid = null;
         this.isPrimary = false;
@@ -431,7 +432,7 @@
     BluetoothGATTService.prototype.getCharacteristic = function(characteristic) {
         return new Promise(function(resolve, reject) {
             if (!characteristic) return reject("getCharacteristic error: no characteristic specified");
-            adapter.discoverCharacteristics(this.uuid, [getCharacteristicUUID(characteristic)], function(characteristics) {
+            adapter.discoverCharacteristics(this._handle, [getCharacteristicUUID(characteristic)], function(characteristics) {
                 if (characteristics.length === 0) return reject("getCharacteristic error: characteristic not found");
                 characteristics[0].service = this;
                 resolve(new BluetoothGATTCharacteristic(characteristics[0]));
@@ -441,7 +442,7 @@
     BluetoothGATTService.prototype.getCharacteristics = function(characteristic) {
         var characteristicUUIDs = characteristic ? [getCharacteristicUUID(characteristic)] : [];
         return new Promise(function(resolve, reject) {
-            adapter.discoverCharacteristics(this.uuid, characteristicUUIDs, function(characteristics) {
+            adapter.discoverCharacteristics(this._handle, characteristicUUIDs, function(characteristics) {
                 if (characteristic && characteristics.length === 0) return reject("getCharacteristics error: characteristic not found");
                 resolve(characteristics.map(function(characteristicInfo) {
                     characteristicInfo.service = this;
@@ -453,7 +454,7 @@
     BluetoothGATTService.prototype.getIncludedService = function(service) {
         return new Promise(function(resolve, reject) {
             if (!service) return reject("getIncludedService error: no service specified");
-            adapter.discoverIncludedServices(this.uuid, [getServiceUUID(service)], function(services) {
+            adapter.discoverIncludedServices(this._handle, [getServiceUUID(service)], function(services) {
                 // To do: filter services
                 if (services.length === 0) return reject("getIncludedService error: service not found");
                 services[0].device = this.device;
@@ -464,7 +465,7 @@
     BluetoothGATTService.prototype.getIncludedServices = function(service) {
         var serviceUUIDs = service ? [getServiceUUID(service)] : [];
         return new Promise(function(resolve, reject) {
-            adapter.discoverIncludedServices(this.uuid, serviceUUIDs, function(services) {
+            adapter.discoverIncludedServices(this._handle, serviceUUIDs, function(services) {
                 // To do: filter services
                 if (service && services.length === 0) return reject("getIncludedServices error: service not found");
                 resolve(services.map(function(serviceInfo) {
@@ -477,6 +478,7 @@
 
     // BluetoothGATTCharacteristic Object
     var BluetoothGATTCharacteristic = function(properties) {
+        this._handle = null;
         this.service = null;
         this.uuid = null;
         this.value = null;
@@ -497,7 +499,7 @@
     BluetoothGATTCharacteristic.prototype.getDescriptor = function(descriptor) {
         return new Promise(function(resolve, reject) {
             if (!descriptor) return reject("getDescriptor error: no descriptor specified");
-            adapter.discoverDescriptors(this.uuid, [getDescriptorUUID(descriptor)], function(descriptors) {
+            adapter.discoverDescriptors(this._handle, [getDescriptorUUID(descriptor)], function(descriptors) {
                 if (descriptors.length === 0) return reject("getDescriptor error: descriptor not found");
                 descriptors[0].characteristic = this;
                 resolve(new BluetoothGATTDescriptor(descriptors[0]));
@@ -507,7 +509,7 @@
     BluetoothGATTCharacteristic.prototype.getDescriptors = function(descriptor) {
         var descriptorUUIDs = descriptor ? [getDescriptorUUID(descriptor)] : [];
         return new Promise(function(resolve, reject) {
-            adapter.discoverDescriptors(this.uuid, descriptorUUIDs, function(descriptors) {
+            adapter.discoverDescriptors(this._handle, descriptorUUIDs, function(descriptors) {
                 if (descriptor && descriptors.length === 0) return reject("getDescriptors error: descriptor not found");
                 resolve(descriptors.map(function(descriptorInfo) {
                     descriptorInfo.characteristic = this;
@@ -518,7 +520,7 @@
     };
     BluetoothGATTCharacteristic.prototype.readValue = function() {
         return new Promise(function(resolve, reject) {
-            adapter.readCharacteristic(this.uuid, function(arrayBuffer) {
+            adapter.readCharacteristic(this._handle, function(arrayBuffer) {
                 this.value = arrayBuffer;
                 resolve(arrayBuffer);
             }.bind(this), wrapReject(reject, "readValue error"));
@@ -527,7 +529,7 @@
     BluetoothGATTCharacteristic.prototype.writeValue = function(bufferSource) {
         var arrayBuffer = bufferSource.buffer || bufferSource;
         return new Promise(function(resolve, reject) {
-            adapter.writeCharacteristic(this.uuid, arrayBuffer, function() {
+            adapter.writeCharacteristic(this._handle, arrayBuffer, function() {
                 this.value = arrayBuffer;
                 resolve();
             }.bind(this), wrapReject(reject, "writeValue error"));
@@ -535,17 +537,18 @@
     };
     BluetoothGATTCharacteristic.prototype.startNotifications = function() {
         return new Promise(function(resolve, reject) {
-            adapter.enableNotify(this.uuid, null, resolve, wrapReject(reject, "startNotifications error"));
+            adapter.enableNotify(this._handle, null, resolve, wrapReject(reject, "startNotifications error"));
         });
     };
     BluetoothGATTCharacteristic.prototype.stopNotifications = function() {
         return new Promise(function(resolve, reject) {
-            adapter.disableNotify(this.uuid, resolve, wrapReject(reject, "stopNotifications error"));
+            adapter.disableNotify(this._handle, resolve, wrapReject(reject, "stopNotifications error"));
         });
     };
 
     // BluetoothGATTDescriptor Object
     var BluetoothGATTDescriptor = function(properties) {
+        this._handle = null;
         this.characteristic = null;
         this.uuid = null
         this.value = null;
@@ -554,7 +557,7 @@
     };
     BluetoothGATTDescriptor.prototype.readValue = function() {
         return new Promise(function(resolve, reject) {
-            adapter.readDescriptor(this.uuid, function(arrayBuffer) {
+            adapter.readDescriptor(this._handle, function(arrayBuffer) {
                 this.value = arrayBuffer;
                 resolve(arrayBuffer);
             }.bind(this), wrapReject(reject, "readValue error"));
@@ -563,7 +566,7 @@
     BluetoothGATTDescriptor.prototype.writeValue = function(bufferSource) {
         var arrayBuffer = bufferSource.buffer || bufferSource;
         return new Promise(function(resolve, reject) {
-            adapter.writeDescriptor(this.uuid, arrayBuffer, function() {
+            adapter.writeDescriptor(this._handle, arrayBuffer, function() {
                 this.value = arrayBuffer;
                 resolve();
             }.bind(this), wrapReject(reject, "writeValue error"));

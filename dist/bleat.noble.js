@@ -69,9 +69,10 @@
                             deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
                                 serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
                             });
+                            if (!this.deviceHandles[deviceID]) this.deviceHandles[deviceID] = deviceInfo;
 
-                            this.deviceHandles[deviceID] = deviceInfo;
                             foundFn({
+                                _handle: deviceID,
                                 id: deviceID,
                                 name: deviceInfo.advertisement.localName,
                                 uuids: serviceUUIDs,
@@ -96,17 +97,17 @@
             stopScan: function(errorFn) {
                 noble.stopScanning();
             },
-            connect: function(deviceID, connectFn, disconnectFn, errorFn) {
-                var baseDevice = this.deviceHandles[deviceID];
+            connect: function(handle, connectFn, disconnectFn, errorFn) {
+                var baseDevice = this.deviceHandles[handle];
                 baseDevice.once("connect", connectFn);
                 baseDevice.once("disconnect", disconnectFn);
                 baseDevice.connect(checkForError(errorFn));
             },
-            disconnect: function(deviceID, errorFn) {
-                this.deviceHandles[deviceID].disconnect(checkForError(errorFn));
+            disconnect: function(handle, errorFn) {
+                this.deviceHandles[handle].disconnect(checkForError(errorFn));
             },
-            discoverServices: function(deviceID, serviceUUIDs, completeFn, errorFn) {
-                var baseDevice = this.deviceHandles[deviceID];
+            discoverServices: function(handle, serviceUUIDs, completeFn, errorFn) {
+                var baseDevice = this.deviceHandles[handle];
                 baseDevice.discoverServices([], checkForError(errorFn, function(services) {
 
                     var discovered = [];
@@ -114,8 +115,10 @@
                         var serviceUUID = bleat._canonicalUUID(serviceInfo.uuid);
 
                         if (serviceUUIDs.length === 0 || serviceUUIDs.indexOf(serviceUUID) >= 0) {
-                            this.serviceHandles[serviceUUID] = serviceInfo;
+                            if (!this.serviceHandles[serviceUUID]) this.serviceHandles[serviceUUID] = serviceInfo;
+
                             discovered.push({
+                                _handle: serviceUUID,
                                 uuid: serviceUUID,
                                 primary: true
                             });
@@ -125,8 +128,8 @@
                     completeFn(discovered);
                 }.bind(this)));
             },
-            discoverIncludedServices: function(serviceID, serviceUUIDs, completeFn, errorFn) {
-                var serviceInfo = this.serviceHandles[serviceID];
+            discoverIncludedServices: function(handle, serviceUUIDs, completeFn, errorFn) {
+                var serviceInfo = this.serviceHandles[handle];
                 serviceInfo.discoverIncludedServices([], checkForError(errorFn, function(services) {
 
                     var discovered = [];
@@ -134,8 +137,10 @@
                         var serviceUUID = bleat._canonicalUUID(serviceInfo.uuid);
 
                         if (serviceUUIDs.length === 0 || serviceUUIDs.indexOf(serviceUUID) >= 0) {
-                            this.serviceHandles[serviceUUID] = serviceInfo;
+                            if (!this.serviceHandles[serviceUUID]) this.serviceHandles[serviceUUID] = serviceInfo;
+
                             discovered.push({
+                                _handle: serviceUUID,
                                 uuid: serviceUUID,
                                 primary: false
                             });
@@ -145,8 +150,8 @@
                     completeFn(discovered);
                 }.bind(this)));
             },
-            discoverCharacteristics: function(serviceID, characteristicUUIDs, completeFn, errorFn) {
-                var serviceInfo = this.serviceHandles[serviceID];
+            discoverCharacteristics: function(handle, characteristicUUIDs, completeFn, errorFn) {
+                var serviceInfo = this.serviceHandles[handle];
                 serviceInfo.discoverCharacteristics([], checkForError(errorFn, function(characteristics) {
 
                     var discovered = [];
@@ -154,8 +159,10 @@
                         var charUUID = bleat._canonicalUUID(characteristicInfo.uuid);
 
                         if (characteristicUUIDs.length === 0 || characteristicUUIDs.indexOf(charUUID) >= 0) {
-                            this.characteristicHandles[charUUID] = characteristicInfo;
+                            if (!this.characteristicHandles[charUUID]) this.characteristicHandles[charUUID] = characteristicInfo;
+
                             discovered.push({
+                                _handle: charUUID,
                                 uuid: charUUID,
                                 properties: {
                                     broadcast:                  (characteristicInfo.properties.indexOf("broadcast") >= 0),
@@ -182,8 +189,8 @@
                     completeFn(discovered);
                 }.bind(this)));
             },
-            discoverDescriptors: function(characteristicID, descriptorUUIDs, completeFn, errorFn) {
-                var characteristicInfo = this.characteristicHandles[characteristicID];
+            discoverDescriptors: function(handle, descriptorUUIDs, completeFn, errorFn) {
+                var characteristicInfo = this.characteristicHandles[handle];
                 characteristicInfo.discoverDescriptors(checkForError(errorFn, function(descriptors) {
 
                     var discovered = [];
@@ -192,8 +199,10 @@
 
                         if (descriptorUUIDs.length === 0 || descriptorUUIDs.indexOf(descUUID) >= 0) {
                             var descHandle = characteristicInfo.uuid + "-" + descriptorInfo.uuid;
-                            this.descriptorHandles[descHandle] = descriptorInfo;
+                            if (!this.descriptorHandles[descHandle]) this.descriptorHandles[descHandle] = descriptorInfo;
+
                             discovered.push({
+                                _handle: descHandle,
                                 uuid: descUUID
                             });
                         }
@@ -202,41 +211,41 @@
                     completeFn(discovered);
                 }.bind(this)));
             },
-            readCharacteristic: function(characteristicID, completeFn, errorFn) {
-                this.characteristicHandles[characteristicID].read(checkForError(errorFn, function(data) {
+            readCharacteristic: function(handle, completeFn, errorFn) {
+                this.characteristicHandles[handle].read(checkForError(errorFn, function(data) {
                     var arrayBuffer = new Uint8Array(data).buffer;
                     completeFn(arrayBuffer);
                 }));
             },
-            writeCharacteristic: function(characteristicID, arrayBuffer, completeFn, errorFn) {
+            writeCharacteristic: function(handle, arrayBuffer, completeFn, errorFn) {
                 var buffer = new Buffer(new Uint8Array(arrayBuffer));
-                this.characteristicHandles[characteristicID].write(buffer, true, checkForError(errorFn, completeFn));
+                this.characteristicHandles[handle].write(buffer, true, checkForError(errorFn, completeFn));
             },
-            enableNotify: function(characteristicID, notifyFn, completeFn, errorFn) {
-                this.characteristicHandles[characteristicID].once("notify", function(state) {
+            enableNotify: function(handle, notifyFn, completeFn, errorFn) {
+                this.characteristicHandles[handle].once("notify", function(state) {
                     if (state !== true) return errorFn("notify failed to enable");
-                    this.charNotifies[characteristicID] = notifyFn;
+                    this.charNotifies[handle] = notifyFn;
                     completeFn();
                 }.bind(this));
-                this.characteristicHandles[characteristicID].notify(true, checkForError(errorFn));
+                this.characteristicHandles[handle].notify(true, checkForError(errorFn));
             },
-            disableNotify: function(characteristicID, completeFn, errorFn) {
-                this.characteristicHandles[characteristicID].once("notify", function(state) {
+            disableNotify: function(handle, completeFn, errorFn) {
+                this.characteristicHandles[handle].once("notify", function(state) {
                     if (state !== false) return errorFn("notify failed to disable");
-                    if (this.charNotifies[characteristicID]) delete this.charNotifies[characteristicID];
+                    if (this.charNotifies[handle]) delete this.charNotifies[handle];
                     completeFn();
                 }.bind(this));
-                this.characteristicHandles[characteristicID].notify(false, checkForError(errorFn));
+                this.characteristicHandles[handle].notify(false, checkForError(errorFn));
             },
-            readDescriptor: function(descriptorID, completeFn, errorFn) {
-                this.descriptorHandles[descriptorID].readValue(checkForError(errorFn, function(data) {
+            readDescriptor: function(handle, completeFn, errorFn) {
+                this.descriptorHandles[handle].readValue(checkForError(errorFn, function(data) {
                     var arrayBuffer = new Uint8Array(data).buffer;
                     completeFn(arrayBuffer);                    
                 }));
             },
-            writeDescriptor: function(descriptorID, arrayBuffer, completeFn, errorFn) {
+            writeDescriptor: function(handle, arrayBuffer, completeFn, errorFn) {
                 var buffer = new Buffer(new Uint8Array(arrayBuffer));
-                this.descriptorHandles[descriptorID].writeValue(buffer, checkForError(errorFn, completeFn));
+                this.descriptorHandles[handle].writeValue(buffer, checkForError(errorFn, completeFn));
             }
         });
     }
