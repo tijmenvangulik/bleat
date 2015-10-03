@@ -59,63 +59,67 @@
             characteristicHandles: {},
             descriptorHandles: {},
             charNotifies: {},
+            foundFn: null,
+            init: function() {
+                noble.on('discover', function(deviceInfo) {
+                    if (this.foundFn) {
+                        var deviceID = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.id;
+                        if (!this.deviceHandles[deviceID]) this.deviceHandles[deviceID] = deviceInfo;
+
+                        var serviceUUIDs = [];
+                        if (deviceInfo.advertisement.serviceUuids) {
+                            deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
+                                serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
+                            });
+                        }
+
+                        // To do: wrangle this
+                        var manufacturerData = {};
+                        /*
+                        if (deviceInfo.advertisement.manufacturerData) {
+                            deviceInfo.advertisement.manufacturerData.forEach(function(serviceAdvert) {
+                                // Buffer to ArrayBuffer
+                                serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
+                            });
+                        }
+                        */
+
+                        var serviceData = {};
+                        if (deviceInfo.advertisement.serviceData) {
+                            deviceInfo.advertisement.serviceData.forEach(function(serviceAdvert) {
+                                // Buffer to ArrayBuffer
+                                serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
+                            });
+                        }
+
+                        this.foundFn({
+                            _handle: deviceID,
+                            id: deviceID,
+                            name: deviceInfo.advertisement.localName,
+                            uuids: serviceUUIDs,
+                            adData: {
+                                manufacturerData: manufacturerData,
+                                serviceData: serviceData,
+                                txPower: deviceInfo.advertisement.txPowerLevel,
+                                rssi: deviceInfo.rssi
+                            }
+                        });
+                    }
+                }.bind(this));
+            },
             startScan: function(serviceUUIDs, completeFn, foundFn, errorFn) {
                 function stateCB(state) {
                     if (state === "poweredOn") {
-                        noble.on('discover', function(deviceInfo) {
-
-                            var deviceID = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.id;
-                            if (!this.deviceHandles[deviceID]) this.deviceHandles[deviceID] = deviceInfo;
-
-                            var serviceUUIDs = [];
-                            if (deviceInfo.advertisement.serviceUuids) {
-                                deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
-                                    serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
-                                });
-                            }
-
-                            // To do: wrangle this
-                            var manufacturerData = {};
-                            /*
-                            if (deviceInfo.advertisement.manufacturerData) {
-                                deviceInfo.advertisement.manufacturerData.forEach(function(serviceAdvert) {
-                                    // Buffer to ArrayBuffer
-                                    serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
-                                });
-                            }
-                            */
-
-                            var serviceData = {};
-                            if (deviceInfo.advertisement.serviceData) {
-                                deviceInfo.advertisement.serviceData.forEach(function(serviceAdvert) {
-                                    // Buffer to ArrayBuffer
-                                    serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
-                                });
-                            }
-
-                            foundFn({
-                                _handle: deviceID,
-                                id: deviceID,
-                                name: deviceInfo.advertisement.localName,
-                                uuids: serviceUUIDs,
-                                adData: {
-                                    manufacturerData: manufacturerData,
-                                    serviceData: serviceData,
-                                    txPower: deviceInfo.advertisement.txPowerLevel,
-                                    rssi: deviceInfo.rssi
-                                }
-                            });
-
-                        }.bind(this));
+                        this.foundFn = foundFn;
                         noble.startScanning(serviceUUIDs, false, checkForError(errorFn, completeFn));
                     }
                     else errorFn("adapter not enabled");
                 }
-
                 if (noble.state === "unknown") noble.once('stateChange', stateCB.bind(this));
                 else stateCB(noble.state);
             },
             stopScan: function(errorFn) {
+                this.foundFn = null;
                 noble.stopScanning();
             },
             connect: function(handle, connectFn, disconnectFn, errorFn) {

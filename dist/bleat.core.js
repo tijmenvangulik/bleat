@@ -622,6 +622,7 @@
         _addAdapter: function(adapterName, definition) {
             adapters[adapterName] = definition;
             adapter = definition;
+            definition.init();
         },
         requestDevice: function(options) {
             return new Promise(function(resolve, reject) {
