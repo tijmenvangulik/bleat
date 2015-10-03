@@ -27,11 +27,12 @@
  */
 
 // TODO:
-//  event handlers
-//  service filtering
-//  test read/write of char/desc
+//  char event handlers
 //  test enable/disable notify
+//  test read/write of char/desc
 //  adData
+//  service filtering
+// service events
 //  evothings
 //  cros
 //  examples
@@ -44,19 +45,19 @@
             // Return existing web bluetooth
             define(root.navigator.bluetooth);
         } else {
-            define(['es6-promise'], factory);
+            define(['es6-promise', 'es6-map'], factory);
         }
     } else if (typeof exports === 'object') {
         // Node. Does not work with strict CommonJS
-        module.exports = factory(Promise);
+        module.exports = factory(Promise, Map);
     } else {
         // Browser globals with support for web workers (root is window)
         if (!root.navigator.bluetooth) {
             // Assume Promise exists or has been poly-filled
-            root.navigator.bluetooth = factory(root.Promise);
+            root.navigator.bluetooth = factory(root.Promise, root.Map);
         }
     }
-}(this, function(Promise) {
+}(this, function(Promise, Map) {
     "use strict";
 
     var defaultScanTime = 10.24 * 1000;
@@ -315,6 +316,11 @@
             Object.keys(extension).forEach(function(key) {
                 if (extension[key] && base.hasOwnProperty(key)) {
                     if (Object.prototype.toString.call(base[key]) === "[object Object]") mergeDictionary(base[key], extension[key]);
+                    else if (Object.prototype.toString.call(base[key]) === "[object Map]" && Object.prototype.toString.call(extension[key]) === "[object Object]") {
+                        Object.keys(extension[key]).forEach(function(mapKey) {
+                            base[key].set(mapKey, extension[key][mapKey]);
+                        });
+                    }
                     else base[key] = extension[key];
                 }
             });
@@ -385,6 +391,16 @@
             }.bind(this), wrapReject(reject, "connectGATT error"));
         }.bind(this));
     };
+    BluetoothDevice.prototype.addEventListener = function(type, callback, capture) {
+        //characteristicvaluechanged
+        //serviceadded;
+        //servicechanged;
+        //serviceremoved;
+    };
+    BluetoothDevice.prototype.removeEventListener = function(type, callback, capture) {
+    };
+    BluetoothDevice.prototype.dispatchEvent = function(event) {
+    };
 
     // BluetoothGATTRemoteServer Object
     var BluetoothGATTRemoteServer = function() {
@@ -418,6 +434,16 @@
                 }.bind(this)));
             }.bind(this), wrapReject(reject, "getPrimaryServices error"));
         }.bind(this));
+    };
+    BluetoothGATTRemoteServer.prototype.addEventListener = function(type, callback, capture) {
+        //characteristicvaluechanged
+        //serviceadded;
+        //servicechanged;
+        //serviceremoved;
+    };
+    BluetoothGATTRemoteServer.prototype.removeEventListener = function(type, callback, capture) {
+    };
+    BluetoothGATTRemoteServer.prototype.dispatchEvent = function(event) {
     };
 
     // BluetoothGATTService Object
@@ -474,6 +500,16 @@
                 }.bind(this)));
             }.bind(this), wrapReject(reject, "getIncludedServices error"));
         }.bind(this));
+    };
+    BluetoothGATTService.prototype.addEventListener = function(type, callback, capture) {
+        //characteristicvaluechanged
+        //serviceadded;
+        //servicechanged;
+        //serviceremoved;
+    };
+    BluetoothGATTService.prototype.removeEventListener = function(type, callback, capture) {
+    };
+    BluetoothGATTService.prototype.dispatchEvent = function(event) {
     };
 
     // BluetoothGATTCharacteristic Object
@@ -545,6 +581,13 @@
             adapter.disableNotify(this._handle, resolve, wrapReject(reject, "stopNotifications error"));
         });
     };
+    BluetoothGATTCharacteristic.prototype.addEventListener = function(type, callback, capture) {
+        //characteristicvaluechanged
+    };
+    BluetoothGATTCharacteristic.prototype.removeEventListener = function(type, callback, capture) {
+    };
+    BluetoothGATTCharacteristic.prototype.dispatchEvent = function(event) {
+    };
 
     // BluetoothGATTDescriptor Object
     var BluetoothGATTDescriptor = function(properties) {
@@ -573,7 +616,7 @@
         }.bind(this));
     };
 
-    // Main Module
+    // Bluetooth Object
     return {
         _canonicalUUID: canonicalUUID,
         _addAdapter: function(adapterName, definition) {
@@ -603,6 +646,18 @@
                     }));
                 }, wrapReject(reject, "requestDevices error"));
             });
+        },
+        addEventListener: function(type, callback, capture) {
+            //characteristicvaluechanged
+            //serviceadded;
+            //servicechanged;
+            //serviceremoved;
+
+            //callback(new Event("<type>"))
+        },
+        removeEventListener: function(type, callback, capture) {
+        },
+        dispatchEvent: function(event) {
         }
     };
 }));

@@ -65,11 +65,33 @@
                         noble.on('discover', function(deviceInfo) {
 
                             var deviceID = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.id;
-                            var serviceUUIDs = [];
-                            deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
-                                serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
-                            });
                             if (!this.deviceHandles[deviceID]) this.deviceHandles[deviceID] = deviceInfo;
+
+                            var serviceUUIDs = [];
+                            if (deviceInfo.advertisement.serviceUuids) {
+                                deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
+                                    serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
+                                });
+                            }
+
+                            // To do: wrangle this
+                            var manufacturerData = {};
+                            /*
+                            if (deviceInfo.advertisement.manufacturerData) {
+                                deviceInfo.advertisement.manufacturerData.forEach(function(serviceAdvert) {
+                                    // Buffer to ArrayBuffer
+                                    serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
+                                });
+                            }
+                            */
+
+                            var serviceData = {};
+                            if (deviceInfo.advertisement.serviceData) {
+                                deviceInfo.advertisement.serviceData.forEach(function(serviceAdvert) {
+                                    // Buffer to ArrayBuffer
+                                    serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
+                                });
+                            }
 
                             foundFn({
                                 _handle: deviceID,
@@ -77,9 +99,8 @@
                                 name: deviceInfo.advertisement.localName,
                                 uuids: serviceUUIDs,
                                 adData: {
-                                    // To do: wrangle this
-                                    manufacturerData: deviceInfo.advertisement.manufacturerData,
-                                    serviceData: deviceInfo.advertisement.serviceData,
+                                    manufacturerData: manufacturerData,
+                                    serviceData: serviceData,
                                     txPower: deviceInfo.advertisement.txPowerLevel,
                                     rssi: deviceInfo.rssi
                                 }
