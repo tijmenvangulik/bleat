@@ -108,13 +108,13 @@
                 }.bind(this));
             },
             startScan: function(serviceUUIDs, completeFn, foundFn, errorFn) {
-                function stateCB(state) {
+                var stateCB = function(state) {
                     if (state === "poweredOn") {
                         this.foundFn = foundFn;
                         noble.startScanning(serviceUUIDs, false, checkForError(errorFn, completeFn));
                     }
                     else errorFn("adapter not enabled");
-                }
+                }.bind(this);
                 if (noble.state === "unknown") noble.once('stateChange', stateCB.bind(this));
                 else stateCB(noble.state);
             },
