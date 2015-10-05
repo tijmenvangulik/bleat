@@ -30,11 +30,11 @@
 //  char event handlers
 //  test enable/disable notify
 //  test read/write of char/desc
-//  adData
+
 //  service filtering
-// service events
+//  service events
 //  evothings
-//  cros
+//  chromeos
 //  examples
 
 // https://github.com/umdjs/umd
@@ -356,6 +356,17 @@
         return scanTimeout;
     }
 
+    function createListenerFn(events) {
+        return function(type, callback, capture) {
+        };
+    }
+
+    function removeEventListener(type, callback, capture) {
+    }
+
+    function dispatchEvent(event) {
+    }
+
     // BluetoothDevice Object
     var BluetoothDevice = function(properties) {
         this._handle = null;
@@ -391,16 +402,14 @@
             }.bind(this), wrapReject(reject, "connectGATT error"));
         }.bind(this));
     };
-    BluetoothDevice.prototype.addEventListener = function(type, callback, capture) {
-        //characteristicvaluechanged
-        //serviceadded;
-        //servicechanged;
-        //serviceremoved;
-    };
-    BluetoothDevice.prototype.removeEventListener = function(type, callback, capture) {
-    };
-    BluetoothDevice.prototype.dispatchEvent = function(event) {
-    };
+    BluetoothDevice.prototype.addEventListener = createListenerFn([
+        "characteristicvaluechanged",
+        "serviceadded",
+        "servicechanged",
+        "serviceremoved"
+    ]);
+    BluetoothDevice.prototype.removeEventListener = removeEventListener;
+    BluetoothDevice.prototype.dispatchEvent = dispatchEvent;
 
     // BluetoothGATTRemoteServer Object
     var BluetoothGATTRemoteServer = function() {
@@ -435,16 +444,14 @@
             }.bind(this), wrapReject(reject, "getPrimaryServices error"));
         }.bind(this));
     };
-    BluetoothGATTRemoteServer.prototype.addEventListener = function(type, callback, capture) {
-        //characteristicvaluechanged
-        //serviceadded;
-        //servicechanged;
-        //serviceremoved;
-    };
-    BluetoothGATTRemoteServer.prototype.removeEventListener = function(type, callback, capture) {
-    };
-    BluetoothGATTRemoteServer.prototype.dispatchEvent = function(event) {
-    };
+    BluetoothGATTRemoteServer.prototype.addEventListener = createListenerFn([
+        "characteristicvaluechanged",
+        "serviceadded",
+        "servicechanged",
+        "serviceremoved"
+    ]);
+    BluetoothGATTRemoteServer.prototype.removeEventListener = removeEventListener;
+    BluetoothGATTRemoteServer.prototype.dispatchEvent = dispatchEvent;
 
     // BluetoothGATTService Object
     var BluetoothGATTService = function(properties) {
@@ -501,16 +508,14 @@
             }.bind(this), wrapReject(reject, "getIncludedServices error"));
         }.bind(this));
     };
-    BluetoothGATTService.prototype.addEventListener = function(type, callback, capture) {
-        //characteristicvaluechanged
-        //serviceadded;
-        //servicechanged;
-        //serviceremoved;
-    };
-    BluetoothGATTService.prototype.removeEventListener = function(type, callback, capture) {
-    };
-    BluetoothGATTService.prototype.dispatchEvent = function(event) {
-    };
+    BluetoothGATTService.prototype.addEventListener = createListenerFn([
+        "characteristicvaluechanged",
+        "serviceadded",
+        "servicechanged",
+        "serviceremoved"
+    ]);
+    BluetoothGATTService.prototype.removeEventListener = removeEventListener;
+    BluetoothGATTService.prototype.dispatchEvent = dispatchEvent;
 
     // BluetoothGATTCharacteristic Object
     var BluetoothGATTCharacteristic = function(properties) {
@@ -581,13 +586,11 @@
             adapter.disableNotify(this._handle, resolve, wrapReject(reject, "stopNotifications error"));
         });
     };
-    BluetoothGATTCharacteristic.prototype.addEventListener = function(type, callback, capture) {
-        //characteristicvaluechanged
-    };
-    BluetoothGATTCharacteristic.prototype.removeEventListener = function(type, callback, capture) {
-    };
-    BluetoothGATTCharacteristic.prototype.dispatchEvent = function(event) {
-    };
+    BluetoothGATTCharacteristic.prototype.addEventListener = createListenerFn([
+        "characteristicvaluechanged"
+    ]);
+    BluetoothGATTCharacteristic.prototype.removeEventListener = removeEventListener;
+    BluetoothGATTCharacteristic.prototype.dispatchEvent = dispatchEvent;
 
     // BluetoothGATTDescriptor Object
     var BluetoothGATTDescriptor = function(properties) {
@@ -648,17 +651,13 @@
                 }, wrapReject(reject, "requestDevices error"));
             });
         },
-        addEventListener: function(type, callback, capture) {
-            //characteristicvaluechanged
-            //serviceadded;
-            //servicechanged;
-            //serviceremoved;
-
-            //callback(new Event("<type>"))
-        },
-        removeEventListener: function(type, callback, capture) {
-        },
-        dispatchEvent: function(event) {
-        }
+        addEventListener: createListenerFn([
+            "characteristicvaluechanged",
+            "serviceadded",
+            "servicechanged",
+            "serviceremoved"
+        ]),
+        removeEventListener: removeEventListener,
+        dispatchEvent: dispatchEvent
     };
 }));
