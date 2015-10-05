@@ -73,16 +73,15 @@
                             });
                         }
 
-                        // To do: wrangle this
                         var manufacturerData = {};
-                        /*
                         if (deviceInfo.advertisement.manufacturerData) {
-                            deviceInfo.advertisement.manufacturerData.forEach(function(serviceAdvert) {
-                                // Buffer to ArrayBuffer
-                                serviceData[serviceAdvert.uuid] = new Uint8Array(serviceAdvert.data).buffer;
-                            });
+                            // First 2 bytes are 16-bit company identifier
+                            var company = deviceInfo.advertisement.manufacturerData.readUInt16LE(0);
+                            company = ("0000" + company.toString(16)).slice(-4);
+                            // Buffer to ArrayBuffer
+                            var data = new Uint8Array(deviceInfo.advertisement.manufacturerData).buffer.slice(2);
+                            manufacturerData[company] = data;
                         }
-                        */
 
                         var serviceData = {};
                         if (deviceInfo.advertisement.serviceData) {
