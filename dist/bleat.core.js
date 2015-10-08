@@ -27,10 +27,6 @@
  */
 
 // TODO:
-//  char event handlers
-//  test enable/disable notify
-//  test read/write of char/desc
-
 //  service filtering
 //  service events
 //  evothings
@@ -356,15 +352,31 @@
         return scanTimeout;
     }
 
-    function createListenerFn(events) {
+    var events = {};
+
+    function createListenerFn(eventTypes) {
         return function(type, callback, capture) {
+            if (eventTypes.indexOf(type) < 0) return; //error
+            if (!events[this]) events[this] = {};
+            if (!events[this][type]) events[this][type] = [];
+            events[this][type].push(callback);
         };
     }
 
     function removeEventListener(type, callback, capture) {
+        if (!events[this] || !events[this][type]) return; //error
+        var i = events[this][type].indexOf(callback);
+        if (i >= 0) events[this][type].splice(i, 1);
+        if (events[this][type].length === 0) delete events[this][type];
+        if (Object.keys(events[this]).length === 0) delete events[this];
     }
 
     function dispatchEvent(event) {
+        if (!events[this] || !events[this][event.type]) return; //error
+        event.target = this;
+        events[this][event.type].forEach(function(callback) {
+            if (typeof callback === "function") callback(event);
+        });
     }
 
     // BluetoothDevice Object
@@ -564,6 +576,7 @@
             adapter.readCharacteristic(this._handle, function(arrayBuffer) {
                 this.value = arrayBuffer;
                 resolve(arrayBuffer);
+                this.dispatchEvent({ type: "characteristicvaluechanged", bubbles: true });
             }.bind(this), wrapReject(reject, "readValue error"));
         }.bind(this));
     };
@@ -578,7 +591,10 @@
     };
     BluetoothGATTCharacteristic.prototype.startNotifications = function() {
         return new Promise(function(resolve, reject) {
-            adapter.enableNotify(this._handle, null, resolve, wrapReject(reject, "startNotifications error"));
+            adapter.enableNotify(this._handle, function(arrayBuffer) {
+                this.value = arrayBuffer;
+                this.dispatchEvent({ type: "characteristicvaluechanged", bubbles: true });
+            }.bind(this), resolve, wrapReject(reject, "startNotifications error"));
         });
     };
     BluetoothGATTCharacteristic.prototype.stopNotifications = function() {

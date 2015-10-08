@@ -201,7 +201,7 @@
                                 }
                             });
 
-                            characteristicInfo.on('read', function(data, isNotification) {
+                            characteristicInfo.on('data', function(data, isNotification) {
                                 if (isNotification === true && typeof this.charNotifies[charUUID] === "function") {
                                     var arrayBuffer = new Uint8Array(data).buffer;
                                     this.charNotifies[charUUID](arrayBuffer);
