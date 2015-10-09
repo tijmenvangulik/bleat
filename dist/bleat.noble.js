@@ -109,8 +109,16 @@
             startScan: function(serviceUUIDs, completeFn, foundFn, errorFn) {
                 var stateCB = function(state) {
                     if (state === "poweredOn") {
-                        this.foundFn = foundFn;
-                        noble.startScanning(serviceUUIDs, false, checkForError(errorFn, completeFn));
+                        if (serviceUUIDs.length === 0) this.foundFn = foundFn;
+                        else this.foundFn = function(device) {
+                            serviceUUIDs.forEach(function(serviceUUID) {
+                                if (device.uuids.indexOf(serviceUUID) >= 0) {
+                                    foundFn(device);
+                                    return;
+                                }
+                            });
+                        };
+                        noble.startScanning([], false, checkForError(errorFn, completeFn));
                     }
                     else errorFn("adapter not enabled");
                 }.bind(this);
