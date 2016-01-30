@@ -73,6 +73,7 @@
                                     serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
                                 });
                                 var device = new bleat._Device(address, deviceInfo.advertisement.localName || address, serviceUUIDs);
+                                device.rssi= deviceInfo.rssi;
                                 device.serviceData = deviceInfo.advertisement.serviceData;
                                 this.foundFn(device);
                             }
