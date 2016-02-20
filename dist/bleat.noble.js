@@ -62,12 +62,13 @@
             charNotifies: {},
 
             init: function(readyFn, errorFn) {
+                var _this=this;  //gul prevent problems of loosing this when connecting after the initialisation
                 function stateCB(state) {
                     if (state === "poweredOn") {
                         noble.on('discover', function(deviceInfo) {
-                            if (this.foundFn) {
+                            if (_this.foundFn) {
                                 var address = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.uuid;
-                                this.deviceHandles[address] = deviceInfo;
+                                _this.deviceHandles[address] = deviceInfo;
                                 var serviceUUIDs = [];
                                 deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
                                     serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
@@ -75,9 +76,9 @@
                                 var device = new bleat._Device(address, deviceInfo.advertisement.localName || address, serviceUUIDs);
                                 device.rssi= deviceInfo.rssi;
                                 device.serviceData = deviceInfo.advertisement.serviceData;
-                                this.foundFn(device);
+                                _this.foundFn(device);
                             }
-                        }.bind(this));
+                        }.bind(_this));
                         readyFn();
                     }
                     else errorFn("adapter not enabled");

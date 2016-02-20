@@ -98,7 +98,7 @@
         this.name = name;
         this.serviceUUIDs = serviceUUIDs;
         this.connected = false;
-        this.rssi=null;
+        this.rssi=0;
         this.services = {};
     };
     Device.prototype.hasService = function(serviceUUID) {
@@ -238,23 +238,24 @@
             if (!adapter) return raiseError("init error")("adapter not found");
             adapter.init(executeFn(readyFn), raiseError("init error"));
         },
-        startScan: function(serviceUUIDs, foundFn) {
+        startScan: function(serviceUUIDs, foundFn,errorFn) {
             if (typeof serviceUUIDs === "function") {
                 foundFn = serviceUUIDs;
+                errorFn=foundFn;
                 serviceUUIDs = [];
             } else if (typeof serviceUUIDs === "string") {
                 serviceUUIDs = [serviceUUIDs];
             }
-            adapter.stopScan(raiseError("stop scan error"));
+            adapter.stopScan(handleError(errorFn,"stop scan error"));
             var devices = {};
             adapter.startScan(serviceUUIDs, function(device) {
                 if (devices[device.address]) return;
                 devices[device.address] = device;
                 if (foundFn) foundFn(device);
-            }.bind(this), raiseError("scan error"));
+            }.bind(this), handleError(errorFn,"scan error"));
         },
-        stopScan: function() {
-            adapter.stopScan(raiseError("stop scan error"));
+        stopScan: function(errorFn) {
+            adapter.stopScan(handleError(errorFn,"stop scan error"));
         }
     };
 }));
@@ -804,12 +805,13 @@
             descriptorHandles: {},
             charNotifies: {},
             init: function(readyFn, errorFn) {
+                var _this=this;  //gul prevent problems of loosing this when connecting after the initialisation
                 function stateCB(state) {
                     if (state === "poweredOn") {
                         noble.on('discover', function(deviceInfo) {
-                            if (this.foundFn) {
+                            if (_this.foundFn) {
                                 var address = (deviceInfo.address && deviceInfo.address !== "unknown") ? deviceInfo.address : deviceInfo.uuid;
-                                this.deviceHandles[address] = deviceInfo;
+                                _this.deviceHandles[address] = deviceInfo;
                                 var serviceUUIDs = [];
                                 deviceInfo.advertisement.serviceUuids.forEach(function(serviceUUID) {
                                     serviceUUIDs.push(bleat._canonicalUUID(serviceUUID));
@@ -817,9 +819,9 @@
                                 var device = new bleat._Device(address, deviceInfo.advertisement.localName || address, serviceUUIDs);
                                 device.rssi= deviceInfo.rssi;
                                 device.serviceData = deviceInfo.advertisement.serviceData;
-                                this.foundFn(device);
+                                _this.foundFn(device);
                             }
-                        }.bind(this));
+                        }.bind(_this));
                         readyFn();
                     }
                     else errorFn("adapter not enabled");
